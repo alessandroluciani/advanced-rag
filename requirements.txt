@@ -10,6 +10,7 @@ aiohttp==3.11.16
     # via
     #   langchain-community
     #   langchain-together
+    #   together
 aiosignal==1.3.2
     # via aiohttp
 altair==5.5.0
@@ -62,6 +63,7 @@ chromadb==0.6.3
 click==8.1.8
     # via
     #   streamlit
+    #   together
     #   typer
     #   uvicorn
 coloredlogs==15.0.1
@@ -79,12 +81,16 @@ distro==1.9.0
     #   posthog
 durationpy==0.9
     # via kubernetes
+eval-type-backport==0.2.2
+    # via together
 exceptiongroup==1.2.2
     # via anyio
 fastapi==0.115.9
     # via chromadb
 filelock==3.18.0
-    # via huggingface-hub
+    # via
+    #   huggingface-hub
+    #   together
 flatbuffers==25.2.10
     # via onnxruntime
 frozenlist==1.5.0
@@ -214,6 +220,7 @@ numpy==1.26.4
     #   pandas
     #   pydeck
     #   streamlit
+    #   together
 oauthlib==3.2.2
     # via
     #   kubernetes
@@ -283,7 +290,9 @@ packaging==24.2
 pandas==2.2.3
     # via streamlit
 pillow==11.1.0
-    # via streamlit
+    # via
+    #   streamlit
+    #   together
 posthog==3.24.0
     # via chromadb
 propcache==0.3.1
@@ -297,7 +306,9 @@ protobuf==5.29.4
     #   opentelemetry-proto
     #   streamlit
 pyarrow==19.0.1
-    # via streamlit
+    # via
+    #   streamlit
+    #   together
 pyasn1==0.6.1
     # via
     #   pyasn1-modules
@@ -314,6 +325,7 @@ pydantic==2.11.3
     #   ollama
     #   openai
     #   pydantic-settings
+    #   together
 pydantic-core==2.33.1
     # via pydantic
 pydantic-settings==2.8.1
@@ -367,13 +379,15 @@ requests==2.32.3
     #   requests-toolbelt
     #   streamlit
     #   tiktoken
+    #   together
 requests-oauthlib==2.0.0
     # via kubernetes
 requests-toolbelt==1.0.0
     # via langsmith
-rich==14.0.0
+rich==13.9.4
     # via
     #   chromadb
+    #   together
     #   typer
 rpds-py==0.24.0
     # via
@@ -404,6 +418,8 @@ streamlit==1.44.1
     # via -r requirements.in
 sympy==1.13.3
     # via onnxruntime
+tabulate==0.9.0
+    # via together
 tenacity==9.1.2
     # via
     #   chromadb
@@ -412,6 +428,8 @@ tenacity==9.1.2
     #   streamlit
 tiktoken==0.9.0
     # via langchain-openai
+together==1.4.6
+    # via -r requirements.in
 tokenizers==0.21.1
     # via chromadb
 toml==0.10.2
@@ -425,8 +443,11 @@ tqdm==4.67.1
     #   chromadb
     #   huggingface-hub
     #   openai
+    #   together
 typer==0.15.2
-    # via chromadb
+    # via
+    #   chromadb
+    #   together
 typing-extensions==4.13.2
     # via
     #   altair

@@ -1,35 +1,18 @@
 
-import json
-
-from langchain.chains.sequential import SimpleSequentialChain
 from langchain.agents import Tool, initialize_agent, AgentType
-
-from langchain.chains.question_answering.map_reduce_prompt import system_template
-from langchain_core.messages.tool import tool_call
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import PromptTemplate
 from langchain_ollama.llms import OllamaLLM
-
-
-from langchain_community.llms import Ollama
-from langchain.chains.retrieval_qa.base import RetrievalQA
-from langchain import hub
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-
-
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.chains import LLMChain
-from langchain.schema import SystemMessage, HumanMessage
-
 from langchain.chains import RetrievalQA
-from langchain.retrievers.self_query.base import SelfQueryRetriever
-from sympy.testing.pytest import tooslow
-from langchain_core.runnables import RunnableLambda
+from langchain_together import Together
 
+from together import Together
+from langchain_together import ChatTogether
 
 from services.embedder import Embedder
-
 from config.setup import config
 
 
@@ -52,6 +35,20 @@ class Ragger():
         self.retriever_1000_10 = Embedder().get_retriever(collection_name=config.knowledge_1000_collection,
                                                          k_value=config.retriever_k_10)
 
+        self.retriever_200_15 = Embedder().get_retriever(collection_name=config.knowledge_200_collection,
+                                                         k_value=config.retriever_k_15)
+        self.retriever_500_15 = Embedder().get_retriever(collection_name=config.knowledge_500_collection,
+                                                         k_value=config.retriever_k_15)
+        self.retriever_1000_15 = Embedder().get_retriever(collection_name=config.knowledge_1000_collection,
+                                                          k_value=config.retriever_k_15)
+
+        self.retriever_200_20 = Embedder().get_retriever(collection_name=config.knowledge_200_collection,
+                                                         k_value=config.retriever_k_20)
+        self.retriever_500_20 = Embedder().get_retriever(collection_name=config.knowledge_500_collection,
+                                                         k_value=config.retriever_k_20)
+        self.retriever_1000_20 = Embedder().get_retriever(collection_name=config.knowledge_1000_collection,
+                                                          k_value=config.retriever_k_20)
+
 
         self.multiquery_retriever_200_5 = self.get_multiquery_retriever(self.retriever_200_5)
         self.multiquery_retriever_500_5 = self.get_multiquery_retriever(self.retriever_500_5)
@@ -61,8 +58,21 @@ class Ragger():
         self.multiquery_retriever_500_10 = self.get_multiquery_retriever(self.retriever_500_10)
         self.multiquery_retriever_1000_10 = self.get_multiquery_retriever(self.retriever_1000_10)
 
+        self.multiquery_retriever_200_15 = self.get_multiquery_retriever(self.retriever_200_15)
+        self.multiquery_retriever_500_15 = self.get_multiquery_retriever(self.retriever_500_15)
+        self.multiquery_retriever_1000_15 = self.get_multiquery_retriever(self.retriever_1000_15)
+
+        self.multiquery_retriever_200_20 = self.get_multiquery_retriever(self.retriever_200_20)
+        self.multiquery_retriever_500_20 = self.get_multiquery_retriever(self.retriever_500_20)
+        self.multiquery_retriever_1000_20 = self.get_multiquery_retriever(self.retriever_1000_20)
+
+
         self.rag_chain = self.generic_agent()
         self.team_chain = self.team_chain()
+
+    @staticmethod
+    def get_llm_together(model, temperature):
+        return ChatTogether(model=model, temperature=temperature)
 
 
     @staticmethod
@@ -96,7 +106,7 @@ class Ragger():
         Create a generic agent for the model.
         """
         template = """
-                        ROLE: Rispondi alla 'QUESTION' utilizzando il "CONTEXT.
+                        ROLE: Rispondi alla 'QUESTION' utilizzando il "CONTEXT. Sfrutta i metadata per migliorare la risposta.
                         ---
                         QUESTION: {question}
                         ---
@@ -104,22 +114,32 @@ class Ragger():
                         """
 
         prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-        retriever = self.multiquery_retriever_200_5
+        retriever = self.multiquery_retriever_500_20
 
         def format_docs(docs):
             print("Documenti presi in considerazione:", len(docs))
             return "\n\n".join(doc.page_content for doc in docs)
 
+        if config.together_activated:
+            # llm = self.get_llm_together(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", temperature=0.0)
+            llm = self.get_llm_together(model="meta-llama/Llama-3.3-70B-Instruct-Turbo", temperature=0.0)
+            # llm = self.get_llm_together(model="mistralai/Mixtral-8x22B-Instruct-v0.1", temperature=0.1)
+        else:
+            llm = self.get_llm(model=config.ollama_model,
+                         temperature=config.model_temperature,
+                         base_url=config.ollama_url)
+
+
+
         rag_chain = (
                 {"context": retriever | format_docs, "question": RunnablePassthrough()}
                 | prompt
-                | self.get_llm(model=config.ollama_model,
-                               temperature=config.model_temperature,
-                               base_url=config.ollama_url)
+                | llm
                 | StrOutputParser()
         )
 
         return rag_chain
+
 
     def team_chain(self):
 
@@ -139,7 +159,9 @@ class Ragger():
         """
 
         template_2 = """
-        ROLE: Rispondi alla "QUESTION" continuando la "RISPOSTAPRECEDENTE" utilizzando il "CONTEXT".
+        GOAL: Rispondi alla "QUESTION" migliorando e completando la "RISPOSTAPRECEDENTE",
+        utilizza il "CONTEXT" per migliorare la "RISPOSTAPRECEDENTE".
+        
         ---
         QUESTION: {question}
         ---                 
@@ -160,21 +182,33 @@ class Ragger():
         prompt_2 = PromptTemplate(template=template_2, input_variables=["context", "question", "answer"])
         prompt_3 = PromptTemplate(template=template_3, input_variables=["context", "question"])
 
+        if config.together_activated:
+            # llm = self.get_llm_together(model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", temperature=0.0)
+            # llm = self.get_llm_together(model="mistralai/Mistral-7B-Instruct-v0.3", temperature=0.1)
+            llm = self.get_llm_together(model="mistralai/Mixtral-8x22B-Instruct-v0.1", temperature=0.1)
+        else:
+            llm = self.get_llm(model=config.ollama_model,
+                         temperature=config.model_temperature,
+                         base_url=config.ollama_url)
+
         def format_docs(docs):
             print("Documenti presi in considerazione:", len(docs))
             return "\n\n".join(doc.page_content for doc in docs)
 
-
         agent_1_chain = (
                 {
-                    "context": self.multiquery_retriever_200_5 | format_docs,
+                    "context": self.multiquery_retriever_1000_10 | format_docs,
                     "question": RunnablePassthrough()
                 }
                 | prompt_1
-                | self.get_llm(model=config.ollama_model,
-                               temperature=config.model_temperature,
-                               base_url=config.ollama_url)
-                | StrOutputParser()
+                | llm
+                | {
+                    "answer": StrOutputParser(),
+                    "context": self.multiquery_retriever_1000_10 | format_docs,
+                    "question": RunnablePassthrough()
+                }
+                | prompt_2
+                | llm
         )
 
         agent_2_chain = (
@@ -184,10 +218,7 @@ class Ragger():
                     "question": RunnablePassthrough(),
                 }
                 | prompt_2
-                | self.get_llm(model=config.ollama_model,
-                               temperature=config.model_temperature,
-                               base_url=config.ollama_url)
-                | StrOutputParser()
+                | llm
         )
 
 
@@ -198,13 +229,10 @@ class Ragger():
                     "question": RunnablePassthrough(),
                 }
                 | prompt_3
-                | self.get_llm(model=config.ollama_model4,
-                               temperature=config.model_temperature,
-                               base_url=config.ollama_url)
-                | StrOutputParser()
+                | llm
         )
 
-        return agent_2_chain
+        return agent_1_chain
 
 
 

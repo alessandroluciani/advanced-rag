@@ -32,7 +32,12 @@ class Configuration(BaseSettings):
     retriever_search_type: str = os.getenv("RETRIEVER_SEARCH_TYPE", 'similarity')
     retriever_k_5: int = os.getenv("RETRIEVER_K_VALUE", 5)
     retriever_k_10: int = os.getenv("RETRIEVER_K_VALUE", 10)
+    retriever_k_15: int = os.getenv("RETRIEVER_K_VALUE", 15)
+    retriever_k_20: int = os.getenv("RETRIEVER_K_VALUE", 20)
     model_temperature: float = os.getenv("MODEL_TEMPERATURE", 0.0)
+
+    together_activated: bool = os.getenv("TOGETHER_ACTIVATED", True)
+    together_api_key: str = os.getenv("TOGETHER_API_KEY", "")
 
 
 config = Configuration()
